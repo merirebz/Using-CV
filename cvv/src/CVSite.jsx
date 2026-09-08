@@ -15,6 +15,7 @@ const emptyForm = {
   skills: "", 
   certifications: "",
   languages: "",
+  photo: "", 
 };
 
 const TEMPLATES = [
@@ -98,6 +99,7 @@ export default function CVSite() {
     skills: parseSkills(form.skills),
     certifications: form.certifications,
     languages: form.languages,
+    photo: form.photo,
   };
 
   return (
@@ -148,8 +150,10 @@ function FormView({ form, update, onNext }) {
     <div style={{ maxWidth: "680px", margin: "0 auto", padding: "48px 32px 80px" }}>
       <h1 style={{ fontSize: "28px", margin: "0 0 4px", fontWeight: 700 }}>Construis ton CV</h1>
       <p style={{ margin: "0 0 32px", color: "#6B6656", fontSize: "15px" }}>
-        100% gratuit, aucune IA, aucune clé API — tout se passe dans ton navigateur.
+       
       </p>
+
+      <PhotoUpload value={form.photo} onChange={(v) => update("photo", v)} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "8px" }}>
         {fields.map((f) => (
@@ -174,6 +178,87 @@ function FormView({ form, update, onNext }) {
       >
         Voir mon CV
       </button>
+    </div>
+  );
+}
+
+function PhotoUpload({ value, onChange }) {
+  const [error, setError] = useState("");
+  const inputId = "cv-photo-input";
+
+  function handleFile(file) {
+    setError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Merci de choisir un fichier image (JPG, PNG...).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("L'image est trop lourde (5 Mo max).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => onChange(reader.result);
+    reader.onerror = () => setError("Impossible de lire cette image.");
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div style={{ marginBottom: "20px" }}>
+      <span style={{ display: "block", fontSize: "13px", color: "#6B6656", marginBottom: "5px" }}>
+        Photo de profil (optionnel)
+      </span>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div
+          style={{
+            width: "72px", height: "72px", borderRadius: "50%",
+            overflow: "hidden", flexShrink: 0,
+            border: "1px solid #C9C2AE", background: "#EFEADD",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          {value ? (
+            <img src={value} alt="Aperçu" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontSize: "10px", color: "#A8A08A", textAlign: "center", padding: "0 6px" }}>
+              Aucune photo
+            </span>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor={inputId}
+            style={{
+              display: "inline-block", padding: "8px 16px", fontSize: "13px",
+              border: "1px solid #1E2A24", borderRadius: "2px", cursor: "pointer",
+              fontFamily: "'Georgia', serif", background: "transparent",
+            }}
+          >
+            {value ? "Changer la photo" : "Ajouter une photo"}
+          </label>
+          <input
+            id={inputId} type="file" accept="image/*"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+            style={{ display: "none" }}
+          />
+          {value && (
+            <button
+              onClick={() => onChange("")}
+              style={{
+                display: "block", marginTop: "6px", background: "none", border: "none",
+                color: "#A8543A", fontSize: "12.5px", cursor: "pointer",
+                fontFamily: "'Georgia', serif", padding: 0,
+              }}
+            >
+              Supprimer la photo
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#A8543A" }}>{error}</p>}
     </div>
   );
 }
@@ -251,7 +336,7 @@ function PreviewView({ content, template, setTemplate, onBack }) {
       </div>
 
       <p style={{ marginTop: "16px", fontSize: "12.5px", color: "#6B6656", textAlign: "center" }}>
-        Astuce : utilise Ctrl+P (ou Cmd+P) pour imprimer / enregistrer en PDF.
+      
       </p>
     </div>
   );
@@ -261,8 +346,21 @@ function PreviewView({ content, template, setTemplate, onBack }) {
 function ClassicTemplate({ content: c }) {
   return (
     <div style={{ padding: "48px 52px", color: "#1E2A24" }}>
-      <h1 style={{ fontSize: "30px", margin: 0, fontWeight: 700 }}>{c.name}</h1>
-      <p style={{ margin: "4px 0 14px", fontStyle: "italic", color: "#A8543A", fontSize: "15px" }}>{c.title}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: "22px", marginBottom: "14px" }}>
+        {c.photo && (
+          <img
+            src={c.photo} alt={c.name}
+            style={{
+              width: "92px", height: "92px", borderRadius: "50%",
+              objectFit: "cover", flexShrink: 0, border: "1px solid #C9C2AE",
+            }}
+          />
+        )}
+        <div>
+          <h1 style={{ fontSize: "30px", margin: 0, fontWeight: 700 }}>{c.name}</h1>
+          <p style={{ margin: "4px 0 0", fontStyle: "italic", color: "#A8543A", fontSize: "15px" }}>{c.title}</p>
+        </div>
+      </div>
       <div style={{ fontFamily: "'Menlo', monospace", fontSize: "11.5px", color: "#6B6656", marginBottom: "18px" }}>
         {[c.contact?.phone, c.contact?.email, c.contact?.github, c.contact?.portfolio].filter(Boolean).join("  ·  ")}
       </div>
@@ -342,6 +440,15 @@ function SidebarTemplate({ content: c }) {
   return (
     <div style={{ display: "flex", minHeight: "500px", flexWrap: "wrap" }}>
       <aside style={{ width: "34%", minWidth: "220px", background: "#1E2A24", color: "#F6F4EE", padding: "40px 26px" }}>
+        {c.photo && (
+          <img
+            src={c.photo} alt={c.name}
+            style={{
+              width: "96px", height: "96px", borderRadius: "50%",
+              objectFit: "cover", marginBottom: "18px", border: "2px solid #C9A98A",
+            }}
+          />
+        )}
         <h1 style={{ fontSize: "24px", margin: 0, fontWeight: 700, lineHeight: 1.2 }}>{c.name}</h1>
         <p style={{ margin: "6px 0 24px", color: "#C9A98A", fontSize: "13.5px", fontStyle: "italic" }}>{c.title}</p>
 
@@ -438,9 +545,22 @@ function MainBlock({ title, children }) {
 function MinimalTemplate({ content: c }) {
   return (
     <div style={{ padding: "52px 60px", color: "#1E2A24", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
-      <h1 style={{ fontSize: "26px", margin: 0, fontWeight: 600 }}>{c.name}</h1>
-      <p style={{ margin: "3px 0 16px", fontSize: "14px", color: "#6B6656" }}>{c.title}</p>
-      <p style={{ fontSize: "12px", color: "#6B6656", margin: "0 0 28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "6px" }}>
+        {c.photo && (
+          <img
+            src={c.photo} alt={c.name}
+            style={{
+              width: "76px", height: "76px", borderRadius: "50%",
+              objectFit: "cover", flexShrink: 0,
+            }}
+          />
+        )}
+        <div>
+          <h1 style={{ fontSize: "26px", margin: 0, fontWeight: 600 }}>{c.name}</h1>
+          <p style={{ margin: "3px 0 0", fontSize: "14px", color: "#6B6656" }}>{c.title}</p>
+        </div>
+      </div>
+      <p style={{ fontSize: "12px", color: "#6B6656", margin: "16px 0 28px" }}>
         {[c.contact?.phone, c.contact?.email, c.contact?.github, c.contact?.portfolio].filter(Boolean).join("   ")}
       </p>
 
